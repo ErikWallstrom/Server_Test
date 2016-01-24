@@ -1,37 +1,13 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "Client.h"
-#include <vector>
-class Server
-{
-private:
-	enum Message : char
-	{
-		CONNECTED = 0,
-		FULL,
-		DATA
-	};
+#include "../include/SDL2/SDL_net.h"
+#include <stdbool.h>
 
-	IPaddress server_ip;
-	TCPsocket server_socket;
-	SDLNet_SocketSet socket_set;
+typedef struct Server Server;
 
-	std::vector<Client*> clients;
-
-	Uint16 port;
-	Uint16 max_clients;
-
-	void add_client(Client* client);
-	void remove_client(Client* client);
-	void handle_data(Client* client);
-
-public:
-
-	Server(Uint16 port, Uint16 max_clients);
-	~Server();
-
-	int start();
-};
+Server* Server_create(Uint16 port, Uint16 max_clients);
+void Server_destroy(Server** server);
+bool Server_update(Server* self);
 
 #endif

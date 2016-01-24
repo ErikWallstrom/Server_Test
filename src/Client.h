@@ -2,23 +2,14 @@
 #define CLIENT_H
 
 #include "../include/SDL2/SDL_net.h"
-#include <string>
-class Client
-{
-private:
-    TCPsocket socket;
-    std::string ip;
-    Uint16 port;
+typedef struct Client Client;
 
-    void get_ip();
-	void get_port();
+Client*     Client_create     (TCPsocket socket);
+void        Client_destroy    (Client** client);
 
-public:
-    Client(TCPsocket socket);
-    ~Client();
-
-    void print();
-    TCPsocket get_socket();
-};
+void        Client_print      (const Client* self);
+Uint16      Client_get_port   (const Client* self);
+Uint32      Client_get_ip     (const Client* self);
+TCPsocket   Client_get_socket (const Client* self);
 
 #endif
