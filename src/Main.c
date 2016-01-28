@@ -4,17 +4,25 @@
 
 int main(void)
 {
-    SDL_Init(0);
-    SDLNet_Init();
+    if(SDL_Init(0) || SDLNet_Init())
+    {
+        return EXIT_FAILURE;
+    }
 
     Server* server = Server_create(50825, 8);
-    while(1)
+    if(server)
     {
-        Server_update(server);
+        while(1)
+        {
+            Server_update(server);
+        }
+    }
+    else
+    {
+        return EXIT_FAILURE;
     }
 
     Server_destroy(&server);
-    SDLNet_Quit();
-    SDL_Quit();
+    SDLNet_Quit(), SDL_Quit();
     return 0;
 }

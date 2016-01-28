@@ -1,16 +1,16 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include <stdbool.h>
-#include <stddef.h>
-
-#define foreach(iterator, array)\
-    for(size_t iterator = Array_size(array) - 1;\
-        iterator < Array_size(array); iterator--)
-
 #ifdef __cplusplus
     extern "C" {
 #endif
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#define foreach(iterator, array)                        \
+        for(size_t iterator = Array_size(array) - 1;    \
+            iterator < Array_size(array); iterator--)
 
 typedef struct Array Array;
 
