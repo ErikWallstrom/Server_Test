@@ -14,7 +14,10 @@ int main(void)
     {
         while(1)
         {
-            Server_update(server);
+            if(!Server_update(server))
+            {
+                return EXIT_FAILURE;
+            }
         }
     }
     else
@@ -24,5 +27,5 @@ int main(void)
 
     Server_destroy(&server);
     SDLNet_Quit(), SDL_Quit();
-    return 0;
+    return EXIT_SUCCESS;
 }

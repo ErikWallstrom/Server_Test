@@ -34,7 +34,45 @@ void Client_destroy(Client** client)
     *client = NULL;
 }
 
-void Client_print(const Client* self)
+bool Client_send_flag(Client* self, Uint8 flag)
+{
+    if(SDLNet_TCP_Send(self->socket, &flag, 1) < 1)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool Client_send_data(Client* self, Uint8* data, int size)
+{
+    if(SDLNet_TCP_Send(self->socket, data, size) < size)
+    {
+        return false;
+    }
+    return true;
+}
+
+Uint8 Client_recv_flag(Client* self)
+{
+    Uint8 flag;
+    if(SDLNet_TCP_Recv(self->socket, &flag, 1) < 1)
+    {
+        return TCP_ERROR;
+    }
+    return flag;
+}
+
+bool Client_recv_data(Client* self, Uint8* buffer, int size)
+{
+    if(SDLNet_TCP_Recv(self->socket, buffer, size) < size)
+    {
+        return false;
+    }
+    return true;
+}
+
+
+void Client_print(Client* self)
 {
     printf("%d.%d.%d.%d:%u",
         (self->ip & 0xFF000000) >> 24,
@@ -45,17 +83,17 @@ void Client_print(const Client* self)
     );
 }
 
-Uint16 Client_get_port(const Client* self)
+Uint16 Client_get_port(Client* self)
 {
     return self->port;
 }
 
-Uint32 Client_get_ip(const Client* self)
+Uint32 Client_get_ip(Client* self)
 {
     return self->ip;
 }
 
-TCPsocket Client_get_socket(const Client* self)
+TCPsocket Client_get_socket(Client* self)
 {
     return self->socket;
 }

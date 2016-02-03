@@ -5,11 +5,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#define CONNECTED    1
-#define DISCONNECTED 2
-#define FULL         3
-#define POSITION     4
-
 struct Server
 {
     IPaddress ip;
@@ -24,17 +19,10 @@ struct Server
 /******************************************************************************
  * Private Functions
  *****************************************************************************/
-bool Server_add_client      (Server* self, Client* client);
-void Server_remove_client   (Server* self, Client* client);
-void Server_send_all        (Server* self, Uint8* data, int size);
-void Server_send_all_exc    (Server* self, Uint8* data, int size, Client* client);
-void Server_handle_position (Server* self, Client* client);
-
 bool Server_add_client(Server* self, Client* client)
 {
     TCPsocket socket = Client_get_socket(client);
-    Uint8 message = CONNECTED;
-    if(SDLNet_TCP_Send(socket, &message, 1) == 1)
+    if(Client_send_flag(client, TCP_CONNECTED))
     {
         Uint8 buffer[6] = {0};
         SDLNet_Write32(Client_get_ip(client), buffer);
@@ -50,6 +38,8 @@ bool Server_add_client(Server* self, Client* client)
             Client_print(client);
             printf(" connected\n");
             Array_insert(self->clients, 0, client);
+
+            system("espeak \"A user has connected\"");
             return true;
         }
     }
@@ -58,12 +48,6 @@ bool Server_add_client(Server* self, Client* client)
 
 void Server_remove_client(Server* self, Client* client)
 {
-    Uint8 message = DISCONNECTED;
-
-    Uint8 buffer[6] = {0};
-    SDLNet_Write32(Client_get_ip(client), buffer);
-    SDLNet_Write16(Client_get_port(client), buffer + 4);
-
     foreach(i, self->clients)
     {
         Client* c = Array_get(self->clients, i);
@@ -73,69 +57,52 @@ void Server_remove_client(Server* self, Client* client)
         }
     }
 
+    Uint8 buffer[6] = {0};
+    SDLNet_Write32(Client_get_ip(client), buffer);
+    SDLNet_Write16(Client_get_port(client), buffer + 4);
+
     Client_print(client);
     printf(" disconnected\n");
     Client_destroy(&client);
 
-    Server_send_all(self, &message, 1);
-    Server_send_all(self, buffer, 6);
-}
-
-void Server_send_all(Server* self, Uint8* data, int size)
-{
-    foreach(i, self->clients)
-    {
-        Client* client = Array_get(self->clients, i);
-        if(!client)
-        {
-            Server_remove_client(self, client);
-        }
-        else
-        {
-            if(SDLNet_TCP_Send(Client_get_socket(client), data, size) < size)
-            {
-                Server_remove_client(self, client);
-            }
-        }
-    }
-}
-
-void Server_send_all_exc(Server* self, Uint8* data, int size, Client* client)
-{
     foreach(i, self->clients)
     {
         Client* c = Array_get(self->clients, i);
-        if(!c)
+        if(!Client_send_flag(c, TCP_DISCONNECTED) ||
+           !Client_send_data(c, buffer, 6)
+          )
         {
             Server_remove_client(self, c);
         }
-        else if(c != client)
-        {
-            if(SDLNet_TCP_Send(Client_get_socket(c), data, size) < size)
-            {
-                Server_remove_client(self, c);
-            }
-        }
     }
+
+    system("espeak \"A user has disconnected\"");
 }
 
 void Server_handle_position(Server* self, Client* client)
 {
     Uint8 buffer_rec[4] = {0};
-    if(SDLNet_TCP_Recv(Client_get_socket(client), buffer_rec, 4) < 4)
+    if(!Client_recv_data(client, buffer_rec, 4))
 	{
 		Server_remove_client(self, client);
 	}
 
-    Uint8 message = POSITION;
     Uint8 buffer_send[10] = {0};
     memcpy(buffer_send, buffer_rec, 4);
 
     SDLNet_Write32(Client_get_ip(client), buffer_send + 4);
     SDLNet_Write16(Client_get_port(client), buffer_send + 8);
 
-    Server_send_all_exc(self, &message, 1, client);
-    Server_send_all_exc(self, buffer_send, 10, client);
+    foreach(i, self->clients)
+    {
+        Client* c = Array_get(self->clients, i);
+        if(!Client_send_flag(c, TCP_POSITION) ||
+           !Client_send_data(c, buffer_send, 10)
+          )
+        {
+            Server_remove_client(self, c);
+        }
+    }
 }
 
 /******************************************************************************
@@ -227,9 +194,9 @@ bool Server_update(Server* self)
                 }
                 else
                 {
-                    Uint8 message = FULL;
-                    SDLNet_TCP_Send(socket, &message, 1);
-                    SDLNet_TCP_Close(socket);
+                    Client* client = Client_create(socket);
+                    Client_send_flag(client, TCP_FULL);
+                    Client_destroy(&client);
                 }
             }
         }
@@ -239,11 +206,8 @@ bool Server_update(Server* self)
             Client* client = Array_get(self->clients, i);
             if (SDLNet_SocketReady(Client_get_socket(client)))
             {
-                Uint8 message;
-                if(SDLNet_TCP_Recv(
-                    Client_get_socket(client), &message, 1
-                  ) < 1
-                )
+                Uint8 message = Client_recv_flag(client);
+                if(message == TCP_ERROR)
                 {
                     Server_remove_client(self, client);
                 }
@@ -251,11 +215,11 @@ bool Server_update(Server* self)
                 {
                     switch (message)
                     {
-                    case DISCONNECTED:
+                    case TCP_DISCONNECTED:
                         Server_remove_client(self, client);
                     break;
 
-                    case POSITION:
+                    case TCP_POSITION:
                         Server_handle_position(self, client);
                     break;
 

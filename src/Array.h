@@ -1,10 +1,6 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#ifdef __cplusplus
-    extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -22,9 +18,5 @@ bool   Array_remove  (Array* self, size_t index);
 void   Array_print   (const Array* self);
 size_t Array_size    (const Array* self);
 void*  Array_get     (const Array* self, size_t index);
-
-#ifdef __cplusplus
-    }
-#endif
 
 #endif
